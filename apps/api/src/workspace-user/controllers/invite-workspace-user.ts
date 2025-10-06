@@ -1,7 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
-import { workspaceTable, workspaceUserTable } from "../../database/schema";
+import {
+  userTable,
+  workspaceTable,
+  workspaceUserTable,
+} from "../../database/schema";
+import { sendInvitationEmail } from "../../utils/mailer";
 
 async function inviteWorkspaceUser(workspaceId: string, userId: string) {
   const [workspace] = await db
@@ -38,6 +43,24 @@ async function inviteWorkspaceUser(workspaceId: string, userId: string) {
       workspaceId,
     })
     .returning();
+
+  // Get user details for email notification
+  const [user] = await db
+    .select()
+    .from(userTable)
+    .where(eq(userTable.id, userId));
+
+  if (user) {
+    try {
+      await sendInvitationEmail({
+        userEmail: user.email,
+        userName: user.name,
+        workspaceName: workspace.name,
+      });
+    } catch (err) {
+      console.error("Failed to send invitation email:", err);
+    }
+  }
 
   return invitedUser;
 }

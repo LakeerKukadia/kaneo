@@ -3,8 +3,9 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import db from "../database";
-import { taskTable } from "../database/schema";
+import { taskTable, userTable } from "../database/schema";
 import { subscribeToEvent } from "../events";
+import { sendTaskNotification } from "../utils/mailer";
 import clearNotifications from "./controllers/clear-notifications";
 import createNotification from "./controllers/create-notification";
 import getNotifications from "./controllers/get-notifications";
@@ -95,6 +96,26 @@ subscribeToEvent(
       resourceId: taskId,
       resourceType: "task",
     });
+
+    // Send email and Google Chat notification
+    try {
+      const [user] = await db
+        .select()
+        .from(userTable)
+        .where(eq(userTable.id, userId));
+
+      if (user) {
+        await sendTaskNotification({
+          userEmail: user.email,
+          userName: user.name,
+          taskTitle: title || "Untitled Task",
+          taskId,
+          action: "created",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send task notification:", err);
+    }
   },
 );
 
@@ -171,6 +192,26 @@ subscribeToEvent(
       resourceId: taskId,
       resourceType: "task",
     });
+
+    // Send email and Google Chat notification for task assignment
+    try {
+      const [user] = await db
+        .select()
+        .from(userTable)
+        .where(eq(userTable.id, newAssignee));
+
+      if (user) {
+        await sendTaskNotification({
+          userEmail: user.email,
+          userName: user.name,
+          taskTitle: title,
+          taskId,
+          action: "assigned",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send task assignment notification:", err);
+    }
   },
 );
 
