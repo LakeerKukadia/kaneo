@@ -40,18 +40,21 @@ RUN addgroup -g 1001 -S appgroup && \
 
 WORKDIR /app
 
-# Copy built application and database migrations first
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/drizzle ./apps/api/drizzle
-
-# Only copy the API package.json for runtime dependencies
+# Copy workspace configuration and lockfile
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 
-# Install only production runtime dependencies for the API
-WORKDIR /app/apps/api
+# Install only runtime dependencies
 RUN corepack enable && \
     corepack prepare pnpm@10.15.0 --activate && \
     HUSKY=0 pnpm install --prod --frozen-lockfile --ignore-scripts
+
+# Copy built application and database migrations
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/drizzle ./apps/api/drizzle
+
+# Set working directory to API
+WORKDIR /app/apps/api
 
 # Set ownership and switch to non-root user
 RUN chown -R appuser:appgroup /app
