@@ -69,9 +69,23 @@ const publicProjectRoute = app.get("/public-project/:id", async (c) => {
   return c.json(project);
 });
 
+// Root endpoint
+app.get("/", (c) => {
+  return c.json({ 
+    message: "Kaneo API Server", 
+    status: "running",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check endpoint for Railway
 app.get("/health", (c) => {
-  return c.json({ status: "ok", timestamp: new Date().toISOString() });
+  return c.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT || 1337,
+    hostname: "0.0.0.0"
+  });
 });
 
 app.on(["POST", "GET", "PUT", "DELETE"], "/api/auth/*", (c) =>
@@ -118,14 +132,17 @@ migrate(db, { migrationsFolder: "drizzle" })
     console.log("⚠️ App will continue running despite migration failure");
   });
 
+const port = Number(process.env.PORT) || 1337;
+
 serve(
   {
     fetch: app.fetch,
-    port: 1337,
+    port: port,
     hostname: "0.0.0.0", // Listen on all interfaces in Docker
   },
   (info) => {
     console.log(`🏃 Hono API is running at http://0.0.0.0:${info.port}`);
+    console.log(`📍 Using PORT environment variable: ${process.env.PORT || 'not set, using default 1337'}`);
   },
 );
 
