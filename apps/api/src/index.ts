@@ -91,7 +91,36 @@ app.on(["POST", "GET", "PUT", "DELETE"], "/api/auth/*", (c) =>
   auth.handler(c.req.raw),
 );
 
+// Add a /me endpoint for user session info
+app.get("/me", async (c) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  
+  if (!session?.user) {
+    return c.json({ error: "Not authenticated" }, 401);
+  }
+  
+  return c.json({
+    user: session.user,
+    session: session.session
+  });
+});
+
+// Authentication middleware - exclude public endpoints
 app.use("*", async (c, next) => {
+  // Skip authentication for public endpoints
+  const publicPaths = ["/health", "/", "/api/auth", "/me"];
+  const currentPath = new URL(c.req.url).pathname;
+  
+  // Skip auth for public paths and auth endpoints
+  if (publicPaths.some(path => currentPath.startsWith(path))) {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    c.set("user", session?.user || null);
+    c.set("session", session?.session || null);
+    c.set("userId", session?.user?.id || "");
+    return next();
+  }
+
+  // For protected paths, require authentication
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   c.set("user", session?.user || null);
   c.set("session", session?.session || null);
