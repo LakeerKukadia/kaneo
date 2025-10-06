@@ -122,9 +122,10 @@ serve(
   {
     fetch: app.fetch,
     port: 1337,
+    hostname: "0.0.0.0", // Listen on all interfaces in Docker
   },
   (info) => {
-    console.log(`🏃 Hono API is running at http://localhost:${info.port}`);
+    console.log(`🏃 Hono API is running at http://0.0.0.0:${info.port}`);
   },
 );
 
