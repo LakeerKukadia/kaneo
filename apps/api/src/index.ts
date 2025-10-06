@@ -107,14 +107,16 @@ const labelRoute = app.route("/label", label);
 const notificationRoute = app.route("/notification", notification);
 const searchRoute = app.route("/search", search);
 
-try {
-  console.log("Migrating database...");
-  migrate(db, {
-    migrationsFolder: `${process.cwd()}/drizzle`,
+// Run database migrations asynchronously (non-blocking)
+migrate(db, { migrationsFolder: "drizzle" })
+  .then(() => {
+    console.log("✅ Database migrations completed successfully");
+  })
+  .catch((error) => {
+    console.error("❌ Database migration failed (non-blocking):", error);
+    // Log the error but don't crash the app
+    console.log("⚠️ App will continue running despite migration failure");
   });
-} catch (error) {
-  console.error(error);
-}
 
 serve(
   {
