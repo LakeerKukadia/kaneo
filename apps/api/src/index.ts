@@ -69,6 +69,11 @@ const publicProjectRoute = app.get("/public-project/:id", async (c) => {
   return c.json(project);
 });
 
+// Health check endpoint for Railway
+app.get("/health", (c) => {
+  return c.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.on(["POST", "GET", "PUT", "DELETE"], "/api/auth/*", (c) =>
   auth.handler(c.req.raw),
 );
