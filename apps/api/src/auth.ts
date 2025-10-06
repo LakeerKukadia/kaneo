@@ -9,8 +9,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const auth: ReturnType<typeof betterAuth> = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:1337",
-  trustedOrigins: ["http://localhost:5173"], // TODO: Add production URL
+  baseURL: process.env.BETTER_AUTH_URL || "https://api.tasks.radon-media.com",
+  trustedOrigins: [
+    "http://localhost:5173", // Development
+    "https://tasks.radon-media.com", // Production frontend
+    "https://api.tasks.radon-media.com" // Production API
+  ],
   secret: process.env.JWT_ACCESS_SECRET || "",
   database: drizzleAdapter(db, {
     provider: "pg",

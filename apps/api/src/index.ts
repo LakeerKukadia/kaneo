@@ -35,17 +35,16 @@ const { isDemoMode } = getSettings();
 
 const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
-  : undefined;
+  : [
+      "http://localhost:5173", // Development
+      "https://tasks.radon-media.com", // Production frontend
+    ];
 
 app.use(
   "*",
   cors({
     credentials: true,
     origin: (origin) => {
-      if (!corsOrigins) {
-        return origin || "*";
-      }
-
       if (!origin) {
         return null;
       }
