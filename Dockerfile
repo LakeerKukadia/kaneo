@@ -35,31 +35,27 @@ FROM node:20-alpine AS production
 
 # Create app user for security
 RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+    adduser -u 1001 -S appuser -G appgroup && \
+    apk add --no-cache wget
 
 WORKDIR /app
 
-# Copy package files for production install
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/typescript-config/package.json ./packages/typescript-config/
-COPY packages/libs/package.json ./packages/libs/
-COPY apps/api/package.json ./apps/api/
-
-# Install pnpm and production dependencies only
-RUN corepack enable && \
-    corepack prepare pnpm@10.15.0 --activate && \
-    pnpm install --prod --frozen-lockfile
-
-# Copy built application and database migrations
+# Copy built application and database migrations first
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/drizzle ./apps/api/drizzle
+
+# Only copy the API package.json for runtime dependencies
+COPY apps/api/package.json ./apps/api/
+
+# Install only production runtime dependencies for the API
+WORKDIR /app/apps/api
+RUN corepack enable && \
+    corepack prepare pnpm@10.15.0 --activate && \
+    HUSKY=0 pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Set ownership and switch to non-root user
 RUN chown -R appuser:appgroup /app
 USER appuser
-
-# Set working directory to API
-WORKDIR /app/apps/api
 
 # Expose port
 EXPOSE 1337
