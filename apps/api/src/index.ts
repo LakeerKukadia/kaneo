@@ -93,16 +93,30 @@ app.on(["POST", "GET", "PUT", "DELETE"], "/api/auth/*", (c) =>
 
 // Add a /me endpoint for user session info
 app.get("/me", async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  
-  if (!session?.user) {
-    return c.json({ error: "Not authenticated" }, 401);
+  try {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    
+    if (!session?.user) {
+      return c.json({ 
+        authenticated: false, 
+        user: null,
+        message: "Not authenticated" 
+      }, 200); // Return 200 instead of 401
+    }
+    
+    return c.json({
+      authenticated: true,
+      user: session.user,
+      session: session.session
+    });
+  } catch (error) {
+    console.error("Error in /me endpoint:", error);
+    return c.json({ 
+      authenticated: false, 
+      user: null,
+      error: "Session check failed" 
+    }, 200);
   }
-  
-  return c.json({
-    user: session.user,
-    session: session.session
-  });
 });
 
 // Authentication middleware - exclude public endpoints
@@ -159,6 +173,13 @@ migrate(db, { migrationsFolder: "drizzle" })
     // Log the error but don't crash the app
     console.log("⚠️ App will continue running despite migration failure");
   });
+
+// Debug environment variables
+console.log("🔧 Environment check:");
+console.log("- PORT:", process.env.PORT || "not set");
+console.log("- BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL || "not set");
+console.log("- JWT_ACCESS_SECRET:", process.env.JWT_ACCESS_SECRET ? "***set***" : "not set");
+console.log("- DATABASE_URL:", process.env.DATABASE_URL ? "***set***" : "not set");
 
 const port = Number(process.env.PORT) || 1337;
 
