@@ -136,7 +136,7 @@ app.get("/me", async (c) => {
 // Authentication middleware - exclude public endpoints
 app.use("*", async (c, next) => {
   // Skip authentication for public endpoints
-  const publicPaths = ["/health", "/", "/api/auth", "/me"];
+  const publicPaths = ["/health", "/", "/api/auth", "/me", "/user/", "/sign-in", "/sign-up", "/sign-out"];
   const currentPath = new URL(c.req.url).pathname;
   
   // Skip auth for public paths and auth endpoints
