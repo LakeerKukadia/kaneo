@@ -87,26 +87,89 @@ app.get("/health", (c) => {
   });
 });
 
-// Better-auth integration - handle all auth routes
-app.use("/api/auth/*", async (c) => {
-  console.log(`🔐 Auth request: ${c.req.method} ${c.req.url}`);
-  return auth.handler(c.req.raw);
+// Better-auth integration using proper mounting
+app.mount("/api/auth", auth);
+
+// Test auth handler directly
+app.post("/test/auth-handler", async (c) => {
+  try {
+    console.log(`🧪 Testing auth handler: ${c.req.method} ${c.req.url}`);
+    const result = await auth.handler(c.req.raw);
+    console.log("Auth handler result:", result);
+    return result;
+  } catch (error) {
+    console.error("Auth handler error:", error);
+    return c.json({ 
+      error: "Auth handler failed", 
+      message: error.message,
+      stack: error.stack 
+    }, 500);
+  }
 });
 
-// Better-auth default endpoints
-app.use("/sign-in", async (c) => auth.handler(c.req.raw));
-app.use("/sign-up", async (c) => auth.handler(c.req.raw));
-app.use("/sign-out", async (c) => auth.handler(c.req.raw));
-
-// Frontend compatibility endpoints
-app.use("/user/sign-in", async (c) => {
-  console.log(`🔄 User sign-in: ${c.req.method} ${c.req.url}`);
-  return auth.handler(c.req.raw);
+// Direct user endpoints with proper error handling
+app.post("/user/sign-up", async (c) => {
+  try {
+    console.log(`🔄 User sign-up: ${c.req.method} ${c.req.url}`);
+    console.log("Request headers:", Object.fromEntries(c.req.raw.headers.entries()));
+    const body = await c.req.json();
+    console.log("Request body:", body);
+    
+    const result = await auth.handler(c.req.raw);
+    console.log("Auth handler response:", result);
+    return result;
+  } catch (error) {
+    console.error("User sign-up error:", error);
+    return c.json({ 
+      error: "Sign-up failed", 
+      message: error.message,
+      stack: error.stack 
+    }, 500);
+  }
 });
 
-app.use("/user/sign-up", async (c) => {
-  console.log(`🔄 User sign-up: ${c.req.method} ${c.req.url}`);
-  return auth.handler(c.req.raw);
+app.post("/user/sign-in", async (c) => {
+  try {
+    console.log(`🔄 User sign-in: ${c.req.method} ${c.req.url}`);
+    const result = await auth.handler(c.req.raw);
+    return result;
+  } catch (error) {
+    console.error("User sign-in error:", error);
+    return c.json({ 
+      error: "Sign-in failed", 
+      message: error.message 
+    }, 500);
+  }
+});
+
+// Debug endpoint to check auth configuration
+app.get("/debug/auth-info", async (c) => {
+  try {
+    return c.json({
+      authConfigured: !!auth,
+      authHandlerExists: typeof auth.handler === 'function',
+      baseURL: process.env.BETTER_AUTH_URL || "https://api.tasks.radon-media.com",
+      hasSecret: !!process.env.JWT_ACCESS_SECRET,
+      hasDatabase: !!process.env.DATABASE_URL,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    return c.json({
+      error: "Auth configuration error",
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Simple test endpoint for user routes
+app.post("/test/user-endpoint", async (c) => {
+  return c.json({ 
+    message: "User endpoint test works", 
+    method: c.req.method,
+    url: c.req.url,
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Add a /me endpoint for user session info
@@ -140,7 +203,7 @@ app.get("/me", async (c) => {
 // Authentication middleware - exclude public endpoints
 app.use("*", async (c, next) => {
   // Skip authentication for public endpoints
-  const publicPaths = ["/health", "/", "/api/auth", "/me", "/user/", "/sign-in", "/sign-up", "/sign-out"];
+  const publicPaths = ["/health", "/", "/api/auth", "/me", "/user/", "/sign-in", "/sign-up", "/sign-out", "/debug/", "/test/"];
   const currentPath = new URL(c.req.url).pathname;
   
   // Skip auth for public paths and auth endpoints
