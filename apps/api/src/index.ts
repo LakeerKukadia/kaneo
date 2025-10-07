@@ -87,8 +87,10 @@ app.get("/health", (c) => {
   });
 });
 
-// Better-auth integration using proper mounting
-app.mount("/api/auth", auth);
+// Better-auth integration for Hono
+app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+  return auth.handler(c.req.raw);
+});
 
 // Test different auth paths
 app.post("/test/auth-handler", async (c) => {
