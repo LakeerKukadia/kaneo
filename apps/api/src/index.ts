@@ -3,15 +3,7 @@ import type { Session, User } from "better-auth/types";
 import { Cron } from "croner";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { Hono } from "hono";
-import { co      environmentVars: {
-        NODE_ENV: process.env.NODE_ENV,
-        PORT: process.env.PORT,
-        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || 'not set',
-        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'not set',
-        JWT_ACCESS: process.env.JWT_ACCESS || 'not set',
-        AUTH_SECRET: process.env.AUTH_SECRET || 'not set',
-        DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'not set'
-      },om "hono/cors";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import activity from "./activity";
 import { auth } from "./auth";
@@ -240,7 +232,9 @@ app.get("/debug/auth-info", async (c) => {
         NODE_ENV: process.env.NODE_ENV,
         PORT: process.env.PORT,
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || 'not set',
-        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ? 'set' : 'not set',
+        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'not set',
+        JWT_ACCESS: process.env.JWT_ACCESS || 'not set',
+        AUTH_SECRET: process.env.AUTH_SECRET || 'not set',
         DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'not set'
       },
       timestamp: new Date().toISOString()
