@@ -87,21 +87,25 @@ app.get("/health", (c) => {
   });
 });
 
-// Better-auth endpoints at /api/auth/*
-app.on(["POST", "GET", "PUT", "DELETE"], "/api/auth/*", (c) => {
+// Better-auth integration - handle all auth routes
+app.use("/api/auth/*", async (c) => {
   console.log(`🔐 Auth request: ${c.req.method} ${c.req.url}`);
   return auth.handler(c.req.raw);
 });
 
-// Better-auth expects default paths like /sign-in, /sign-up etc
-// Mount auth handler at root level for default paths
-app.on(["POST", "GET", "PUT", "DELETE"], "/sign-in", (c) => auth.handler(c.req.raw));
-app.on(["POST", "GET", "PUT", "DELETE"], "/sign-up", (c) => auth.handler(c.req.raw));
-app.on(["POST", "GET", "PUT", "DELETE"], "/sign-out", (c) => auth.handler(c.req.raw));
+// Better-auth default endpoints
+app.use("/sign-in", async (c) => auth.handler(c.req.raw));
+app.use("/sign-up", async (c) => auth.handler(c.req.raw));
+app.use("/sign-out", async (c) => auth.handler(c.req.raw));
 
-// Also handle /user/* paths for compatibility
-app.on(["POST", "GET", "PUT", "DELETE"], "/user/*", (c) => {
-  console.log(`🔄 User endpoint: ${c.req.method} ${c.req.url}`);
+// Frontend compatibility endpoints
+app.use("/user/sign-in", async (c) => {
+  console.log(`🔄 User sign-in: ${c.req.method} ${c.req.url}`);
+  return auth.handler(c.req.raw);
+});
+
+app.use("/user/sign-up", async (c) => {
+  console.log(`🔄 User sign-up: ${c.req.method} ${c.req.url}`);
   return auth.handler(c.req.raw);
 });
 
