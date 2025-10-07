@@ -90,17 +90,59 @@ app.get("/health", (c) => {
 // Better-auth integration using proper mounting
 app.mount("/api/auth", auth);
 
-// Test auth handler directly
+// Test different auth paths
 app.post("/test/auth-handler", async (c) => {
   try {
     console.log(`🧪 Testing auth handler: ${c.req.method} ${c.req.url}`);
-    const result = await auth.handler(c.req.raw);
-    console.log("Auth handler result:", result);
-    return result;
+    
+    const body = await c.req.json();
+    console.log("Test request body:", body);
+    
+    // Test multiple path variations
+    const testPaths = [
+      "/sign-up",
+      "/api/auth/sign-up", 
+      "/auth/sign-up",
+      "/signup"
+    ];
+    
+    const results = {};
+    
+    for (const testPath of testPaths) {
+      try {
+        const testURL = new URL(c.req.url);
+        testURL.pathname = testPath;
+        
+        const testRequest = new Request(testURL.toString(), {
+          method: c.req.method,
+          headers: c.req.raw.headers,
+          body: JSON.stringify(body)
+        });
+        
+        console.log(`Testing path: ${testPath}`);
+        const result = await auth.handler(testRequest);
+        results[testPath] = {
+          status: result.status,
+          statusText: result.statusText,
+          ok: result.ok
+        };
+        
+        console.log(`Path ${testPath} result:`, results[testPath]);
+      } catch (error) {
+        results[testPath] = { error: error.message };
+        console.log(`Path ${testPath} error:`, error.message);
+      }
+    }
+    
+    return c.json({
+      message: "Auth handler path test results",
+      results,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error("Auth handler error:", error);
+    console.error("Auth handler test error:", error);
     return c.json({ 
-      error: "Auth handler failed", 
+      error: "Auth handler test failed", 
       message: error.message,
       stack: error.stack 
     }, 500);
@@ -167,18 +209,39 @@ app.post("/user/sign-in", async (c) => {
 // Debug endpoint to check auth configuration
 app.get("/debug/auth-info", async (c) => {
   try {
+    // Test if we can call auth methods
+    let authMethods = {};
+    try {
+      authMethods = {
+        hasApi: !!auth.api,
+        hasHandler: typeof auth.handler === 'function',
+        apiMethods: auth.api ? Object.keys(auth.api) : [],
+      };
+    } catch (e) {
+      authMethods = { error: e.message };
+    }
+
     return c.json({
       authConfigured: !!auth,
       authHandlerExists: typeof auth.handler === 'function',
+      authMethods,
       baseURL: process.env.BETTER_AUTH_URL || "https://api.tasks.radon-media.com",
       hasSecret: !!process.env.JWT_ACCESS_SECRET,
       hasDatabase: !!process.env.DATABASE_URL,
+      environmentVars: {
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT,
+        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || 'not set',
+        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ? 'set' : 'not set',
+        DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'not set'
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     return c.json({
       error: "Auth configuration error",
       message: error.message,
+      stack: error.stack,
       timestamp: new Date().toISOString()
     });
   }
@@ -277,12 +340,34 @@ migrate(db, { migrationsFolder: "drizzle" })
     console.log("⚠️ App will continue running despite migration failure");
   });
 
-// Debug environment variables
+// Debug environment variables and auth initialization
 console.log("🔧 Environment check:");
 console.log("- PORT:", process.env.PORT || "not set");
 console.log("- BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL || "not set");
 console.log("- JWT_ACCESS_SECRET:", process.env.JWT_ACCESS_SECRET ? "***set***" : "not set");
 console.log("- DATABASE_URL:", process.env.DATABASE_URL ? "***set***" : "not set");
+
+console.log("🔧 Better-auth initialization check:");
+console.log("- Auth object exists:", !!auth);
+console.log("- Auth handler type:", typeof auth?.handler);
+console.log("- Auth API exists:", !!auth?.api);
+
+// Test auth handler with a simple request
+try {
+  const testRequest = new Request("http://localhost/sign-up", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ test: "data" })
+  });
+  console.log("- Testing auth handler initialization...");
+  auth.handler(testRequest).then(result => {
+    console.log("- Auth handler test result:", result.status, result.statusText);
+  }).catch(error => {
+    console.log("- Auth handler test error:", error.message);
+  });
+} catch (error) {
+  console.log("- Auth handler initialization error:", error.message);
+}
 
 const port = Number(process.env.PORT) || 1337;
 
