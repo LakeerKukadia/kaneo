@@ -107,15 +107,25 @@ app.post("/test/auth-handler", async (c) => {
   }
 });
 
-// Direct user endpoints with proper error handling
+// Direct user endpoints with path correction for better-auth
 app.post("/user/sign-up", async (c) => {
   try {
     console.log(`🔄 User sign-up: ${c.req.method} ${c.req.url}`);
-    console.log("Request headers:", Object.fromEntries(c.req.raw.headers.entries()));
     const body = await c.req.json();
     console.log("Request body:", body);
     
-    const result = await auth.handler(c.req.raw);
+    // Create a new request with the path better-auth expects
+    const authURL = new URL(c.req.url);
+    authURL.pathname = "/api/auth/sign-up";
+    
+    const authRequest = new Request(authURL.toString(), {
+      method: c.req.method,
+      headers: c.req.raw.headers,
+      body: JSON.stringify(body)
+    });
+    
+    console.log("Modified request URL:", authURL.toString());
+    const result = await auth.handler(authRequest);
     console.log("Auth handler response:", result);
     return result;
   } catch (error) {
@@ -131,7 +141,19 @@ app.post("/user/sign-up", async (c) => {
 app.post("/user/sign-in", async (c) => {
   try {
     console.log(`🔄 User sign-in: ${c.req.method} ${c.req.url}`);
-    const result = await auth.handler(c.req.raw);
+    const body = await c.req.json();
+    
+    // Create a new request with the path better-auth expects  
+    const authURL = new URL(c.req.url);
+    authURL.pathname = "/api/auth/sign-in";
+    
+    const authRequest = new Request(authURL.toString(), {
+      method: c.req.method,
+      headers: c.req.raw.headers,
+      body: JSON.stringify(body)
+    });
+    
+    const result = await auth.handler(authRequest);
     return result;
   } catch (error) {
     console.error("User sign-in error:", error);
