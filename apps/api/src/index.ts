@@ -87,9 +87,53 @@ app.get("/health", (c) => {
   });
 });
 
-// Better-auth integration for Hono
-app.on(["POST", "GET"], "/api/auth/*", async (c) => {
-  return auth.handler(c.req.raw);
+// Better-auth integration for Hono - handle all auth routes
+app.all("/api/auth/*", async (c) => {
+  console.log(`🔐 Auth request: ${c.req.method} ${c.req.path}`);
+  try {
+    const response = await auth.handler(c.req.raw);
+    return response;
+  } catch (error) {
+    console.error("Auth handler error:", error);
+    return c.json({ error: "Authentication error", message: error.message }, 500);
+  }
+});
+
+// Debug: Test auth object directly
+app.get("/debug/auth-test", async (c) => {
+  try {
+    console.log("Testing auth object:");
+    console.log("Auth type:", typeof auth);
+    console.log("Auth handler type:", typeof auth.handler);
+    console.log("Auth api type:", typeof auth.api);
+    
+    // Try to call auth directly with a simple request
+    const testRequest = new Request("https://api.tasks.radon-media.com/api/auth/session", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    const result = await auth.handler(testRequest);
+    
+    return c.json({
+      authObjectExists: !!auth,
+      handlerExists: !!auth.handler,
+      apiExists: !!auth.api,
+      testResult: {
+        status: result.status,
+        statusText: result.statusText,
+        ok: result.ok
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Auth test error:", error);
+    return c.json({
+      error: "Auth test failed",
+      message: error.message,
+      stack: error.stack
+    }, 500);
+  }
 });
 
 // Test different auth paths
