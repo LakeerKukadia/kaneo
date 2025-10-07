@@ -70,20 +70,20 @@ const publicProjectRoute = app.get("/public-project/:id", async (c) => {
 
 // Root endpoint
 app.get("/", (c) => {
-  return c.json({ 
-    message: "Kaneo API Server", 
+  return c.json({
+    message: "Kaneo API Server",
     status: "running",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Health check endpoint for Railway
 app.get("/health", (c) => {
-  return c.json({ 
-    status: "ok", 
+  return c.json({
+    status: "ok",
     timestamp: new Date().toISOString(),
     port: process.env.PORT || 1337,
-    hostname: "0.0.0.0"
+    hostname: "0.0.0.0",
   });
 });
 
@@ -94,58 +94,61 @@ app.mount("/api/auth", auth);
 app.post("/test/auth-handler", async (c) => {
   try {
     console.log(`🧪 Testing auth handler: ${c.req.method} ${c.req.url}`);
-    
+
     const body = await c.req.json();
     console.log("Test request body:", body);
-    
+
     // Test multiple path variations
     const testPaths = [
       "/sign-up",
-      "/api/auth/sign-up", 
+      "/api/auth/sign-up",
       "/auth/sign-up",
-      "/signup"
+      "/signup",
     ];
-    
+
     const results = {};
-    
+
     for (const testPath of testPaths) {
       try {
         const testURL = new URL(c.req.url);
         testURL.pathname = testPath;
-        
+
         const testRequest = new Request(testURL.toString(), {
           method: c.req.method,
           headers: c.req.raw.headers,
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
-        
+
         console.log(`Testing path: ${testPath}`);
         const result = await auth.handler(testRequest);
         results[testPath] = {
           status: result.status,
           statusText: result.statusText,
-          ok: result.ok
+          ok: result.ok,
         };
-        
+
         console.log(`Path ${testPath} result:`, results[testPath]);
       } catch (error) {
         results[testPath] = { error: error.message };
         console.log(`Path ${testPath} error:`, error.message);
       }
     }
-    
+
     return c.json({
       message: "Auth handler path test results",
       results,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Auth handler test error:", error);
-    return c.json({ 
-      error: "Auth handler test failed", 
-      message: error.message,
-      stack: error.stack 
-    }, 500);
+    return c.json(
+      {
+        error: "Auth handler test failed",
+        message: error.message,
+        stack: error.stack,
+      },
+      500,
+    );
   }
 });
 
@@ -155,28 +158,31 @@ app.post("/user/sign-up", async (c) => {
     console.log(`🔄 User sign-up: ${c.req.method} ${c.req.url}`);
     const body = await c.req.json();
     console.log("Request body:", body);
-    
+
     // Create a new request with the path better-auth expects
     const authURL = new URL(c.req.url);
     authURL.pathname = "/api/auth/sign-up";
-    
+
     const authRequest = new Request(authURL.toString(), {
       method: c.req.method,
       headers: c.req.raw.headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
-    
+
     console.log("Modified request URL:", authURL.toString());
     const result = await auth.handler(authRequest);
     console.log("Auth handler response:", result);
     return result;
   } catch (error) {
     console.error("User sign-up error:", error);
-    return c.json({ 
-      error: "Sign-up failed", 
-      message: error.message,
-      stack: error.stack 
-    }, 500);
+    return c.json(
+      {
+        error: "Sign-up failed",
+        message: error.message,
+        stack: error.stack,
+      },
+      500,
+    );
   }
 });
 
@@ -184,25 +190,28 @@ app.post("/user/sign-in", async (c) => {
   try {
     console.log(`🔄 User sign-in: ${c.req.method} ${c.req.url}`);
     const body = await c.req.json();
-    
-    // Create a new request with the path better-auth expects  
+
+    // Create a new request with the path better-auth expects
     const authURL = new URL(c.req.url);
     authURL.pathname = "/api/auth/sign-in";
-    
+
     const authRequest = new Request(authURL.toString(), {
       method: c.req.method,
       headers: c.req.raw.headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
-    
+
     const result = await auth.handler(authRequest);
     return result;
   } catch (error) {
     console.error("User sign-in error:", error);
-    return c.json({ 
-      error: "Sign-in failed", 
-      message: error.message 
-    }, 500);
+    return c.json(
+      {
+        error: "Sign-in failed",
+        message: error.message,
+      },
+      500,
+    );
   }
 });
 
@@ -214,7 +223,7 @@ app.get("/debug/auth-info", async (c) => {
     try {
       authMethods = {
         hasApi: !!auth.api,
-        hasHandler: typeof auth.handler === 'function',
+        hasHandler: typeof auth.handler === "function",
         apiMethods: auth.api ? Object.keys(auth.api) : [],
       };
     } catch (e) {
@@ -223,39 +232,44 @@ app.get("/debug/auth-info", async (c) => {
 
     return c.json({
       authConfigured: !!auth,
-      authHandlerExists: typeof auth.handler === 'function',
+      authHandlerExists: typeof auth.handler === "function",
       authMethods,
-      baseURL: process.env.BETTER_AUTH_URL || "https://api.tasks.radon-media.com",
-      hasSecret: !!(process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS || process.env.AUTH_SECRET),
+      baseURL:
+        process.env.BETTER_AUTH_URL || "https://api.tasks.radon-media.com",
+      hasSecret: !!(
+        process.env.JWT_ACCESS_SECRET ||
+        process.env.JWT_ACCESS ||
+        process.env.AUTH_SECRET
+      ),
       hasDatabase: !!process.env.DATABASE_URL,
       environmentVars: {
         NODE_ENV: process.env.NODE_ENV,
         PORT: process.env.PORT,
-        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || 'not set',
-        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'not set',
-        JWT_ACCESS: process.env.JWT_ACCESS || 'not set',
-        AUTH_SECRET: process.env.AUTH_SECRET || 'not set',
-        DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'not set'
+        BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || "not set",
+        JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "not set",
+        JWT_ACCESS: process.env.JWT_ACCESS || "not set",
+        AUTH_SECRET: process.env.AUTH_SECRET || "not set",
+        DATABASE_URL: process.env.DATABASE_URL ? "set" : "not set",
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     return c.json({
       error: "Auth configuration error",
       message: error.message,
       stack: error.stack,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 });
 
 // Simple test endpoint for user routes
 app.post("/test/user-endpoint", async (c) => {
-  return c.json({ 
-    message: "User endpoint test works", 
+  return c.json({
+    message: "User endpoint test works",
     method: c.req.method,
     url: c.req.url,
-    timestamp: new Date().toISOString() 
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -263,38 +277,55 @@ app.post("/test/user-endpoint", async (c) => {
 app.get("/me", async (c) => {
   try {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
-    
+
     if (!session?.user) {
-      return c.json({ 
-        authenticated: false, 
-        user: null,
-        message: "Not authenticated" 
-      }, 200); // Return 200 instead of 401
+      return c.json(
+        {
+          authenticated: false,
+          user: null,
+          message: "Not authenticated",
+        },
+        200,
+      ); // Return 200 instead of 401
     }
-    
+
     return c.json({
       authenticated: true,
       user: session.user,
-      session: session.session
+      session: session.session,
     });
   } catch (error) {
     console.error("Error in /me endpoint:", error);
-    return c.json({ 
-      authenticated: false, 
-      user: null,
-      error: "Session check failed" 
-    }, 200);
+    return c.json(
+      {
+        authenticated: false,
+        user: null,
+        error: "Session check failed",
+      },
+      200,
+    );
   }
 });
 
 // Authentication middleware - exclude public endpoints
 app.use("*", async (c, next) => {
   // Skip authentication for public endpoints
-  const publicPaths = ["/health", "/", "/api/auth", "/me", "/user/", "/sign-in", "/sign-up", "/sign-out", "/debug/", "/test/"];
+  const publicPaths = [
+    "/health",
+    "/",
+    "/api/auth",
+    "/me",
+    "/user/",
+    "/sign-in",
+    "/sign-up",
+    "/sign-out",
+    "/debug/",
+    "/test/",
+  ];
   const currentPath = new URL(c.req.url).pathname;
-  
+
   // Skip auth for public paths and auth endpoints
-  if (publicPaths.some(path => currentPath.startsWith(path))) {
+  if (publicPaths.some((path) => currentPath.startsWith(path))) {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
     c.set("user", session?.user || null);
     c.set("session", session?.session || null);
@@ -346,8 +377,14 @@ migrate(db, { migrationsFolder: "drizzle" })
 console.log("🔧 Environment check:");
 console.log("- PORT:", process.env.PORT || "not set");
 console.log("- BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL || "not set");
-console.log("- JWT_ACCESS_SECRET:", process.env.JWT_ACCESS_SECRET ? "***set***" : "not set");
-console.log("- DATABASE_URL:", process.env.DATABASE_URL ? "***set***" : "not set");
+console.log(
+  "- JWT_ACCESS_SECRET:",
+  process.env.JWT_ACCESS_SECRET ? "***set***" : "not set",
+);
+console.log(
+  "- DATABASE_URL:",
+  process.env.DATABASE_URL ? "***set***" : "not set",
+);
 
 console.log("🔧 Better-auth initialization check:");
 console.log("- Auth object exists:", !!auth);
@@ -359,14 +396,21 @@ try {
   const testRequest = new Request("http://localhost/sign-up", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ test: "data" })
+    body: JSON.stringify({ test: "data" }),
   });
   console.log("- Testing auth handler initialization...");
-  auth.handler(testRequest).then(result => {
-    console.log("- Auth handler test result:", result.status, result.statusText);
-  }).catch(error => {
-    console.log("- Auth handler test error:", error.message);
-  });
+  auth
+    .handler(testRequest)
+    .then((result) => {
+      console.log(
+        "- Auth handler test result:",
+        result.status,
+        result.statusText,
+      );
+    })
+    .catch((error) => {
+      console.log("- Auth handler test error:", error.message);
+    });
 } catch (error) {
   console.log("- Auth handler initialization error:", error.message);
 }
@@ -381,7 +425,9 @@ serve(
   },
   (info) => {
     console.log(`🏃 Hono API is running at http://0.0.0.0:${info.port}`);
-    console.log(`📍 Using PORT environment variable: ${process.env.PORT || 'not set, using default 1337'}`);
+    console.log(
+      `📍 Using PORT environment variable: ${process.env.PORT || "not set, using default 1337"}`,
+    );
   },
 );
 
