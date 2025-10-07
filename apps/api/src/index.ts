@@ -90,12 +90,26 @@ app.get("/health", (c) => {
 // Better-auth integration for Hono - handle all auth routes
 app.all("/api/auth/*", async (c) => {
   console.log(`🔐 Auth request: ${c.req.method} ${c.req.path}`);
+  console.log(`🔐 Request URL: ${c.req.url}`);
+  
   try {
     const response = await auth.handler(c.req.raw);
+    console.log(`🔐 Auth response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.clone().text();
+      console.error(`🔐 Auth error response: ${errorText}`);
+    }
+    
     return response;
   } catch (error) {
-    console.error("Auth handler error:", error);
-    return c.json({ error: "Authentication error", message: error.message }, 500);
+    console.error("🔐 Auth handler error:", error);
+    console.error("🔐 Error stack:", error.stack);
+    return c.json({ 
+      error: "Authentication error", 
+      message: error.message,
+      stack: error.stack
+    }, 500);
   }
 });
 
@@ -146,10 +160,11 @@ app.post("/test/auth-handler", async (c) => {
 
     // Test multiple path variations
     const testPaths = [
-      "/sign-up",
-      "/api/auth/sign-up",
-      "/auth/sign-up",
-      "/signup",
+      "/sign-up/email",
+      "/api/auth/sign-up/email",
+      "/auth/sign-up/email",
+      "/sign-in/email",
+      "/api/auth/sign-in/email",
     ];
 
     const results = {};
